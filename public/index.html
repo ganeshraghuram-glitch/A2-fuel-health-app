@@ -283,7 +283,7 @@
     <h2>Weight goal</h2>
     <div class="weight-track"><div class="weight-fill" id="weightFill" style="width:0%"></div></div>
     <div class="weight-labels">
-      <span id="weightStartLabel">78 kg</span>
+      <span id="weightStartLabel">83 kg</span>
       <span id="weightTargetLabel">Target 72 kg</span>
     </div>
     <div class="bmi-row"><span>Current BMI</span><span class="bmi-val" id="bmiVal">—</span></div>
@@ -312,7 +312,7 @@ async function apiSet(key, value){
 }
 
 const defaultSettings = {
-  weightKg: 78, heightCm: 170, age: 43, sex: "male",
+  weightKg: 83, heightCm: 170, age: 43, sex: "male",
   activity: 1.55, targetWeightKg: 72, dailyCalorieTarget: 2000,
   caffeineCutoff: "14:00", caffeineLimit: 400
 };
@@ -336,10 +336,16 @@ let todaysHealth = null;
 let todaysWorkouts = [];
 let todaysCaffeine = [];
 let todaysAlcohol = [];
+let pendingMealEstimate = null;
 
 async function loadSettings(){
   const v = await apiGet('settings');
   if(v) settings = { ...defaultSettings, ...v };
+  if(!settings.weightUpdatedTo83){
+    settings.weightKg = 83;
+    settings.weightUpdatedTo83 = true;
+    await saveSettingsToStorage();
+  }
   fillSettingsForm();
 }
 async function saveSettingsToStorage(){ await apiSet('settings', settings); }
@@ -407,7 +413,8 @@ function activeCaloriesBurned(){
 function renderGauge(){
   const foodCalories = todaysLog.reduce((s,e)=>s+Number(e.calories||0),0);
   const alcoholCalories = todaysAlcohol.reduce((s,e)=>s+Number(e.calories||0),0);
-  const consumed = foodCalories + alcoholCalories;
+  const pendingCalories = pendingMealEstimate ? Number(pendingMealEstimate.calories || 0) : 0;
+  const consumed = foodCalories + alcoholCalories + pendingCalories;
   const baseTarget = settings.dailyCalorieTarget;
   const burned = activeCaloriesBurned();
   const adjustedTarget = baseTarget + Math.round(burned * 0.5); // partial credit for activity
@@ -624,7 +631,8 @@ document.getElementById('saveSettings').addEventListener('click', async ()=>{
     targetWeightKg: parseFloat(document.getElementById('setTargetWeight').value) || defaultSettings.targetWeightKg,
     dailyCalorieTarget: parseInt(document.getElementById('setCalTarget').value) || defaultSettings.dailyCalorieTarget,
     caffeineCutoff: document.getElementById('setCaffeineCutoff').value || defaultSettings.caffeineCutoff,
-    caffeineLimit: parseInt(document.getElementById('setCaffeineLimit').value) || defaultSettings.caffeineLimit
+    caffeineLimit: parseInt(document.getElementById('setCaffeineLimit').value) || defaultSettings.caffeineLimit,
+    weightUpdatedTo83: true
   };
   await saveSettingsToStorage();
   renderGauge(); renderWeightGoal();
@@ -637,10 +645,17 @@ document.getElementById('cameraBtn').addEventListener('click', ()=> document.get
 document.getElementById('uploadBtn').addEventListener('click', ()=> document.getElementById('uploadInput').click());
 document.getElementById('cameraInput').addEventListener('change', handleFile);
 document.getElementById('uploadInput').addEventListener('change', handleFile);
+document.getElementById('rCal').addEventListener('input', ()=>{
+  if(!pendingMealEstimate) return;
+  pendingMealEstimate.calories = Number(document.getElementById('rCal').value) || 0;
+  renderGauge();
+});
 
 function handleFile(e){
   const file = e.target.files[0];
   if(!file) return;
+  pendingMealEstimate = null;
+  renderGauge();
   const reader = new FileReader();
   reader.onload = () => {
     const dataUrl = reader.result;
@@ -667,10 +682,14 @@ async function analyzeImage(base64, mediaType){
     document.getElementById('rProtein').value = Math.round(parsed.protein_g || 0);
     document.getElementById('rCarbs').value = Math.round(parsed.carbs_g || 0);
     document.getElementById('rFat').value = Math.round(parsed.fat_g || 0);
+    pendingMealEstimate = { calories: Number(document.getElementById('rCal').value) || 0 };
+    renderGauge();
     document.getElementById('resultBox').style.display = 'block';
   }catch(err){
     document.getElementById('resultFoodName').textContent = 'Could not read the photo — enter manually';
     ['rCal','rProtein','rCarbs','rFat'].forEach(id => document.getElementById(id).value = '');
+    pendingMealEstimate = null;
+    renderGauge();
     document.getElementById('resultBox').style.display = 'block';
   }finally{
     document.getElementById('analyzingMsg').style.display = 'none';
@@ -689,6 +708,7 @@ document.getElementById('addEntryBtn').addEventListener('click', async ()=>{
   };
   todaysLog.push(entry);
   await saveTodayLog();
+  pendingMealEstimate = null;
   renderLedger(); renderGauge();
   document.getElementById('resultBox').style.display = 'none';
   document.getElementById('preview').style.display = 'none';
