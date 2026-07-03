@@ -112,6 +112,10 @@
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
   .toast.error{ border-color:var(--danger); color:var(--danger); }
   .toast.success{ border-color:var(--leaf); }
+
+  .tabbar{ display:flex; gap:8px; margin-bottom:18px; background:var(--bg-panel); border:1px solid var(--line); border-radius:12px; padding:5px; }
+  .tabbtn{ flex:1; background:none; border:none; color:var(--cream-dim); font-family:var(--mono); font-size:12px; padding:10px 6px; border-radius:8px; cursor:pointer; }
+  .tabbtn.active{ background:var(--mustard); color:#1c1406; font-weight:600; }
 </style>
 </head>
 <body>
@@ -127,6 +131,12 @@
       <button class="gear" id="settingsToggle">Settings</button>
     </div>
   </header>
+
+  <div class="tabbar">
+    <button class="tabbtn active" id="tabBtnToday" data-tab="today">🛒 Today</button>
+    <button class="tabbtn" id="tabBtnTrends" data-tab="trends">📈 Trends</button>
+    <button class="tabbtn" id="tabBtnHealth" data-tab="health">⌚ Health</button>
+  </div>
 
   <div class="card drawer" id="settingsDrawer">
     <h2>Your profile</h2>
@@ -158,7 +168,10 @@
     <div class="webhook-box" id="webhookUrl">/.netlify/functions/health-webhook?token=YOUR_WEBHOOK_SECRET</div>
   </div>
 
-  <div class="gaugecard">
+  
+
+  <div class="tab-panel" id="tab-today">
+    <div class="gaugecard">
     <div class="gaugewrap">
       <svg width="120" height="120" viewBox="0 0 120 120">
         <circle cx="60" cy="60" r="50" fill="none" stroke="#33503f" stroke-width="10"/>
@@ -174,7 +187,123 @@
     </div>
   </div>
 
-  <div class="card">
+  
+    <div class="card">
+    <h2>Add to Cart</h2>
+    <div class="capture-row">
+      <button class="btn" id="cameraBtn">📷 Take photo</button>
+      <button class="btn" id="uploadBtn">🖼 Upload photo</button>
+    </div>
+    <input type="file" id="cameraInput" accept="image/*" capture="environment">
+    <input type="file" id="uploadInput" accept="image/*">
+    <img id="preview">
+    <div class="analyzing" id="analyzingMsg">Reading the plate…</div>
+
+    <div class="result" id="resultBox">
+      <div class="result-food" id="resultFoodName">—</div>
+      <div class="fields">
+        <div class="field"><label>Calories</label><input type="number" id="rCal"></div>
+        <div class="field"><label>Protein (g)</label><input type="number" id="rProtein"></div>
+        <div class="field"><label>Carbs (g)</label><input type="number" id="rCarbs"></div>
+        <div class="field"><label>Fat (g)</label><input type="number" id="rFat"></div>
+      </div>
+      <button class="btn btn-primary" id="addEntryBtn" style="width:100%;">Add to Cart</button>
+    </div>
+  </div>
+
+  
+    <div class="card">
+    <h2>Receipt</h2>
+    <div id="ledgerList"><div class="empty-log">Cart's empty — take a photo to add your first item.</div></div>
+  </div>
+
+  
+    <div class="card">
+    <h2>Caffeine</h2>
+    <div class="weight-track"><div class="weight-fill" id="caffeineFill" style="width:0%"></div></div>
+    <div class="weight-labels">
+      <span id="caffeineTotalLabel">0 mg today</span>
+      <span>Guideline: 400 mg/day</span>
+    </div>
+    <div class="capture-row" style="margin-top:14px;">
+      <button class="btn" id="addCoffeeBtn">☕ Coffee (~95mg)</button>
+      <button class="btn" id="addTeaBtn">🍵 Tea (~47mg)</button>
+    </div>
+    <button class="btn" id="addCustomCaffeineBtn" style="width:100%; margin-top:10px;">+ Custom drink</button>
+    <div class="result" id="customCaffeineForm">
+      <div class="fields">
+        <div class="field"><label>Drink</label><input type="text" id="cDrink" placeholder="Espresso shot"></div>
+        <div class="field"><label>Caffeine (mg)</label><input type="number" id="cMg" placeholder="63"></div>
+      </div>
+      <button class="btn btn-primary" id="addCustomCaffeineConfirm" style="width:100%;">Add</button>
+    </div>
+    <div id="caffeineList" style="margin-top:6px;"></div>
+    <div class="adjusted-note" id="caffeineCutoffNote" style="display:none; color:var(--amber);"></div>
+  </div>
+
+  
+    <div class="card">
+    <h2>Drinks</h2>
+    <p style="font-family:var(--mono); font-size:11px; color:var(--cream-dim); margin:-6px 0 12px;">Drinks are added to your cart too — same budget as food.</p>
+    <div class="capture-row">
+      <button class="btn" id="addBeerBtn">🍺 Beer (~150)</button>
+      <button class="btn" id="addWineBtn">🍷 Wine (~125)</button>
+    </div>
+    <div class="capture-row" style="margin-top:10px;">
+      <button class="btn" id="addSpiritBtn">🥃 Spirit (~100)</button>
+      <button class="btn" id="addCocktailBtn">🍸 Cocktail (~200)</button>
+    </div>
+    <button class="btn" id="addCustomDrinkBtn" style="width:100%; margin-top:10px;">+ Custom drink</button>
+    <div class="result" id="customDrinkForm">
+      <div class="fields">
+        <div class="field"><label>Drink</label><input type="text" id="dName" placeholder="Old fashioned"></div>
+        <div class="field"><label>Calories</label><input type="number" id="dCal" placeholder="180"></div>
+      </div>
+      <button class="btn btn-primary" id="addCustomDrinkConfirm" style="width:100%;">Add</button>
+    </div>
+    <div id="drinkList" style="margin-top:6px;"></div>
+  </div>
+
+  
+    <div class="card">
+    <h2>Weight goal</h2>
+    <div class="weight-track"><div class="weight-fill" id="weightFill" style="width:0%"></div></div>
+    <div class="weight-labels">
+      <span id="weightStartLabel">78 kg</span>
+      <span id="weightTargetLabel">Target 72 kg</span>
+    </div>
+    <div class="bmi-row"><span>Current BMI</span><span class="bmi-val" id="bmiVal">—</span></div>
+    <div class="bmi-row"><span>Healthy BMI range (weight)</span><span class="bmi-val" id="healthyRangeVal">—</span></div>
+  </div>
+
+  
+  </div>
+
+  <div class="tab-panel" id="tab-trends" style="display:none;">
+    <div class="card">
+    <h2>Trends</h2>
+    <div class="capture-row">
+      <button class="btn btn-primary" id="trendsWeekBtn">This week</button>
+      <button class="btn" id="trendsMonthBtn">This month</button>
+    </div>
+    <div id="trendsBody" style="margin-top:16px;">
+      <div class="activity-empty">Loading…</div>
+    </div>
+  </div>
+
+  
+    <div class="card">
+    <h2>Weight Progression</h2>
+    <div id="weightProgressionBody">
+      <div class="activity-empty">Loading…</div>
+    </div>
+  </div>
+
+  
+  </div>
+
+  <div class="tab-panel" id="tab-health" style="display:none;">
+    <div class="card">
     <h2>Today's activity</h2>
     <div class="activity-grid">
       <div class="activity-stat"><div class="val" id="stepsVal">—</div><div class="lbl">Steps</div></div>
@@ -200,104 +329,13 @@
     </div>
   </div>
 
-  <div class="card">
-    <h2>Caffeine</h2>
-    <div class="weight-track"><div class="weight-fill" id="caffeineFill" style="width:0%"></div></div>
-    <div class="weight-labels">
-      <span id="caffeineTotalLabel">0 mg today</span>
-      <span>Guideline: 400 mg/day</span>
-    </div>
-    <div class="capture-row" style="margin-top:14px;">
-      <button class="btn" id="addCoffeeBtn">☕ Coffee (~95mg)</button>
-      <button class="btn" id="addTeaBtn">🍵 Tea (~47mg)</button>
-    </div>
-    <button class="btn" id="addCustomCaffeineBtn" style="width:100%; margin-top:10px;">+ Custom drink</button>
-    <div class="result" id="customCaffeineForm">
-      <div class="fields">
-        <div class="field"><label>Drink</label><input type="text" id="cDrink" placeholder="Espresso shot"></div>
-        <div class="field"><label>Caffeine (mg)</label><input type="number" id="cMg" placeholder="63"></div>
-      </div>
-      <button class="btn btn-primary" id="addCustomCaffeineConfirm" style="width:100%;">Add</button>
-    </div>
-    <div id="caffeineList" style="margin-top:6px;"></div>
-    <div class="adjusted-note" id="caffeineCutoffNote" style="display:none; color:var(--amber);"></div>
-  </div>
-
-  <div class="card">
-    <h2>Drinks</h2>
-    <p style="font-family:var(--mono); font-size:11px; color:var(--cream-dim); margin:-6px 0 12px;">Drinks are added to your cart too — same budget as food.</p>
-    <div class="capture-row">
-      <button class="btn" id="addBeerBtn">🍺 Beer (~150)</button>
-      <button class="btn" id="addWineBtn">🍷 Wine (~125)</button>
-    </div>
-    <div class="capture-row" style="margin-top:10px;">
-      <button class="btn" id="addSpiritBtn">🥃 Spirit (~100)</button>
-      <button class="btn" id="addCocktailBtn">🍸 Cocktail (~200)</button>
-    </div>
-    <button class="btn" id="addCustomDrinkBtn" style="width:100%; margin-top:10px;">+ Custom drink</button>
-    <div class="result" id="customDrinkForm">
-      <div class="fields">
-        <div class="field"><label>Drink</label><input type="text" id="dName" placeholder="Old fashioned"></div>
-        <div class="field"><label>Calories</label><input type="number" id="dCal" placeholder="180"></div>
-      </div>
-      <button class="btn btn-primary" id="addCustomDrinkConfirm" style="width:100%;">Add</button>
-    </div>
-    <div id="drinkList" style="margin-top:6px;"></div>
-  </div>
-
-  <div class="card">
-    <h2>Trends</h2>
-    <div class="capture-row">
-      <button class="btn btn-primary" id="trendsWeekBtn">This week</button>
-      <button class="btn" id="trendsMonthBtn">This month</button>
-    </div>
-    <div id="trendsBody" style="margin-top:16px;">
-      <div class="activity-empty">Loading…</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Add to Cart</h2>
-    <div class="capture-row">
-      <button class="btn" id="cameraBtn">📷 Take photo</button>
-      <button class="btn" id="uploadBtn">🖼 Upload photo</button>
-    </div>
-    <input type="file" id="cameraInput" accept="image/*" capture="environment">
-    <input type="file" id="uploadInput" accept="image/*">
-    <img id="preview">
-    <div class="analyzing" id="analyzingMsg">Reading the plate…</div>
-
-    <div class="result" id="resultBox">
-      <div class="result-food" id="resultFoodName">—</div>
-      <div class="fields">
-        <div class="field"><label>Calories</label><input type="number" id="rCal"></div>
-        <div class="field"><label>Protein (g)</label><input type="number" id="rProtein"></div>
-        <div class="field"><label>Carbs (g)</label><input type="number" id="rCarbs"></div>
-        <div class="field"><label>Fat (g)</label><input type="number" id="rFat"></div>
-      </div>
-      <button class="btn btn-primary" id="addEntryBtn" style="width:100%;">Add to Cart</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Receipt</h2>
-    <div id="ledgerList"><div class="empty-log">Cart's empty — take a photo to add your first item.</div></div>
-  </div>
-
-  <div class="card">
-    <h2>Weight goal</h2>
-    <div class="weight-track"><div class="weight-fill" id="weightFill" style="width:0%"></div></div>
-    <div class="weight-labels">
-      <span id="weightStartLabel">78 kg</span>
-      <span id="weightTargetLabel">Target 72 kg</span>
-    </div>
-    <div class="bmi-row"><span>Current BMI</span><span class="bmi-val" id="bmiVal">—</span></div>
-    <div class="bmi-row"><span>Healthy BMI range (weight)</span><span class="bmi-val" id="healthyRangeVal">—</span></div>
+  
   </div>
 
   <div class="disclaimer">
     Calorie estimates from photos and workouts are approximate. This tool doesn't replace advice from a doctor or dietitian — check with one before making major changes to your diet or exercise.
   </div>
+
 
 </div>
 
@@ -312,6 +350,23 @@ function showToast(msg, type){
   t.className = 'toast show' + (type ? ' ' + type : '');
   clearTimeout(showToast._timer);
   showToast._timer = setTimeout(()=>{ t.className = 'toast'; }, 2600);
+}
+
+// Saves and, if it fails, keeps the entry visible (never silently vanishes)
+// and retries once automatically after a few seconds.
+async function saveWithRetry(saveFn, successMsg){
+  const ok = await saveFn();
+  if(ok){
+    if(successMsg) showToast(successMsg, 'success');
+    return true;
+  }
+  showToast('Saved on this screen — retrying sync…', 'error');
+  setTimeout(async ()=>{
+    const retryOk = await saveFn();
+    if(retryOk) showToast('Synced ✓' + (successMsg ? ' — ' + successMsg : ''), 'success');
+    else showToast('Still offline — this will keep showing until it syncs', 'error');
+  }, 3000);
+  return false;
 }
 
 async function apiGet(key){
@@ -364,6 +419,7 @@ let todaysLog = [];
 let todaysHealth = null;
 let todaysWorkouts = [];
 let todaysCaffeine = [];
+let currentTrendsWindow = 7;
 let todaysAlcohol = [];
 
 async function loadSettings(){
@@ -371,7 +427,7 @@ async function loadSettings(){
   if(v) settings = { ...defaultSettings, ...v };
   fillSettingsForm();
 }
-async function saveSettingsToStorage(){ await apiSet('settings', settings); }
+async function saveSettingsToStorage(){ return await apiSet('settings', settings); }
 
 async function loadTodayLog(){
   const v = await apiGet('log:' + todayKey());
@@ -395,6 +451,16 @@ async function loadTodayCaffeine(){
   renderCaffeine();
 }
 async function saveTodayCaffeine(){ return await apiSet('caffeine:' + todayKey(), todaysCaffeine); }
+
+async function recordWeightEntry(weightKg){
+  const log = (await apiGet('weightlog')) || [];
+  const today = todayKey();
+  const existingIdx = log.findIndex(e => e.date === today);
+  if(existingIdx >= 0){ log[existingIdx].weightKg = weightKg; }
+  else { log.push({ date: today, weightKg }); }
+  log.sort((a,b) => a.date.localeCompare(b.date));
+  await saveWithRetry(() => apiSet('weightlog', log));
+}
 
 async function loadTodayAlcohol(){
   const v = await apiGet('alcohol:' + todayKey());
@@ -659,11 +725,10 @@ document.getElementById('saveSettings').addEventListener('click', async ()=>{
     caffeineCutoff: document.getElementById('setCaffeineCutoff').value || defaultSettings.caffeineCutoff,
     caffeineLimit: parseInt(document.getElementById('setCaffeineLimit').value) || defaultSettings.caffeineLimit
   };
-  await saveSettingsToStorage();
   renderGauge(); renderWeightGoal();
-  const note = document.getElementById('saveNote');
-  note.style.display = 'block';
-  setTimeout(()=> note.style.display = 'none', 1800);
+  await saveWithRetry(saveSettingsToStorage, 'Profile saved');
+  await recordWeightEntry(settings.weightKg);
+  await loadTrends(currentTrendsWindow);
 });
 
 document.getElementById('cameraBtn').addEventListener('click', ()=> document.getElementById('cameraInput').click());
@@ -722,13 +787,7 @@ document.getElementById('addEntryBtn').addEventListener('click', async ()=>{
   };
   todaysLog.push(entry);
   renderLedger(); renderGauge();
-  const ok = await saveTodayLog();
-  if(ok){
-    showToast('− ₹' + entry.calories + ' · ' + entry.food + ' · ₹' + budgetState().balance + ' left today', 'success');
-  } else {
-    todaysLog = todaysLog.filter(e => e.id !== entry.id);
-    renderLedger(); renderGauge();
-  }
+  await saveWithRetry(saveTodayLog, '− ₹' + entry.calories + ' · ' + entry.food + ' · ₹' + budgetState().balance + ' left today');
   document.getElementById('resultBox').style.display = 'none';
   document.getElementById('preview').style.display = 'none';
   document.getElementById('cameraInput').value = '';
@@ -747,9 +806,7 @@ document.getElementById('addWorkoutBtn').addEventListener('click', async ()=>{
   };
   todaysWorkouts.push(w);
   renderWorkouts(); renderGauge();
-  const ok = await saveTodayWorkouts();
-  if(ok){ showToast('+₹' + Math.round(w.calories*0.5) + ' bonus · ' + w.type + ' logged · ₹' + budgetState().balance + ' left today', 'success'); }
-  else { todaysWorkouts = todaysWorkouts.filter(x => x.id !== w.id); renderWorkouts(); renderGauge(); }
+  await saveWithRetry(saveTodayWorkouts, '+₹' + Math.round(w.calories*0.5) + ' bonus · ' + w.type + ' logged · ₹' + budgetState().balance + ' left today');
   document.getElementById('workoutForm').style.display = 'none';
   document.getElementById('wDuration').value = '';
   document.getElementById('wCalories').value = '';
@@ -763,9 +820,7 @@ async function addCaffeine(drink, mg){
   };
   todaysCaffeine.push(entry);
   renderCaffeine();
-  const ok = await saveTodayCaffeine();
-  if(ok){ showToast(drink + ' logged · ' + mg + 'mg caffeine', 'success'); }
-  else { todaysCaffeine = todaysCaffeine.filter(c => c.id !== entry.id); renderCaffeine(); }
+  await saveWithRetry(saveTodayCaffeine, drink + ' logged · ' + mg + 'mg caffeine');
 }
 document.getElementById('addCoffeeBtn').addEventListener('click', ()=> addCaffeine('Coffee', 95));
 document.getElementById('addTeaBtn').addEventListener('click', ()=> addCaffeine('Tea', 47));
@@ -790,9 +845,7 @@ async function addDrink(name, calories){
   todaysAlcohol.push(entry);
   renderAlcohol();
   renderGauge();
-  const ok = await saveTodayAlcohol();
-  if(ok){ showToast('− ₹' + calories + ' · ' + name + ' · ₹' + budgetState().balance + ' left today', 'success'); }
-  else { todaysAlcohol = todaysAlcohol.filter(d => d.id !== entry.id); renderAlcohol(); renderGauge(); }
+  await saveWithRetry(saveTodayAlcohol, '− ₹' + calories + ' · ' + name + ' · ₹' + budgetState().balance + ' left today');
 }
 document.getElementById('addBeerBtn').addEventListener('click', ()=> addDrink('Beer', 150));
 document.getElementById('addWineBtn').addEventListener('click', ()=> addDrink('Wine (glass)', 125));
@@ -812,14 +865,48 @@ document.getElementById('addCustomDrinkConfirm').addEventListener('click', async
 
 // --- Trends ---
 async function loadTrends(days){
+  currentTrendsWindow = days;
   document.getElementById('trendsBody').innerHTML = '<div class="activity-empty">Loading…</div>';
   try{
     const r = await fetch('/.netlify/functions/api-trends?days=' + days);
     const data = await r.json();
     renderTrends(data);
+    await renderWeightProgression(data);
   }catch(err){
     document.getElementById('trendsBody').innerHTML = '<div class="activity-empty">Could not load trends.</div>';
   }
+}
+
+async function renderWeightProgression(trendsData){
+  const el = document.getElementById('weightProgressionBody');
+  const log = (await apiGet('weightlog')) || [];
+  const { summary } = trendsData;
+
+  // 7700 kcal ≈ 1kg of body fat — a commonly cited estimate, not exact for any one person.
+  const projectedChangeKg = Math.round((summary.totalBalance / 7700) * -10) / 10; // negative balance (overspend) -> weight gain
+
+  const changeLine = summary.daysLogged === 0
+    ? 'Not enough logged days yet to project.'
+    : `Based on your ₹${summary.totalBalance >= 0 ? '+' : ''}${summary.totalBalance} balance this window, expect roughly <strong>${projectedChangeKg > 0 ? '+' : ''}${projectedChangeKg} kg</strong> ${projectedChangeKg <= 0 ? '(loss)' : '(gain)'}.`;
+
+  let logHtml = '';
+  if(log.length >= 1){
+    const first = log[0];
+    const last = log[log.length - 1];
+    const actualChange = Math.round((last.weightKg - first.weightKg) * 10) / 10;
+    logHtml = `
+      <div class="bmi-row"><span>Logged: ${first.date} → ${last.date}</span><span class="bmi-val">${first.weightKg}kg → ${last.weightKg}kg</span></div>
+      <div class="bmi-row"><span>Actual change</span><span class="bmi-val" style="color:${actualChange<=0?'var(--leaf)':'var(--danger)'}">${actualChange > 0 ? '+' : ''}${actualChange} kg</span></div>
+    `;
+  } else {
+    logHtml = `<div class="activity-empty">Update your weight in Settings after weigh-ins to start tracking actual progress here.</div>`;
+  }
+
+  el.innerHTML = `
+    <div class="insight-box">${changeLine}</div>
+    ${logHtml}
+    <p style="font-family:var(--mono); font-size:10px; color:var(--cream-dim); opacity:0.7; margin-top:10px;">7,700 kcal ≈ 1kg of body fat is a commonly used estimate, not exact for any individual — treat this as directional.</p>
+  `;
 }
 
 function renderTrends(data){
@@ -882,6 +969,17 @@ document.getElementById('trendsMonthBtn').addEventListener('click', (e)=>{
   document.getElementById('trendsWeekBtn').className = 'btn';
   loadTrends(30);
 });
+
+// --- Tabs ---
+function switchTab(tab){
+  ['today','trends','health'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = (t === tab) ? 'block' : 'none';
+    document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1)).className = 'tabbtn' + (t === tab ? ' active' : '');
+  });
+}
+document.getElementById('tabBtnToday').addEventListener('click', ()=> switchTab('today'));
+document.getElementById('tabBtnTrends').addEventListener('click', ()=> switchTab('trends'));
+document.getElementById('tabBtnHealth').addEventListener('click', ()=> switchTab('health'));
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
