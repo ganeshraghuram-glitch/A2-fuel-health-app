@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#16231b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="A2 Fuel">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" href="/icons/icon-192.png">
 <title>A2 Fuel</title>
 <style>
   :root{
@@ -92,6 +99,14 @@
   .webhook-box{ font-family:var(--mono); font-size:11px; color:var(--cream-dim); background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; margin-top:12px; word-break:break-all; }
 
   .disclaimer{ font-family:var(--mono); font-size:10px; color:var(--cream-dim); opacity:0.6; text-align:center; margin-top:26px; line-height:1.6; padding:0 10px; }
+
+  .trend-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+  .trend-chart{ display:flex; align-items:flex-end; gap:6px; height:120px; margin-bottom:8px; overflow-x:auto; padding-bottom:4px; }
+  .trend-bar-wrap{ display:flex; flex-direction:column; align-items:center; flex:1; min-width:24px; height:100%; justify-content:flex-end; }
+  .trend-bar{ width:100%; border-radius:4px 4px 0 0; min-height:2px; }
+  .trend-bar-label{ font-family:var(--mono); font-size:9px; color:var(--cream-dim); margin-top:4px; }
+  .insight-box{ background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:14px; font-family:var(--mono); font-size:12px; color:var(--cream); line-height:1.7; margin-top:10px; }
+  .insight-box strong{ color:var(--mustard); }
 </style>
 </head>
 <body>
@@ -204,6 +219,39 @@
   </div>
 
   <div class="card">
+    <h2>Drinks</h2>
+    <p style="font-family:var(--mono); font-size:11px; color:var(--cream-dim); margin:-6px 0 12px;">Alcohol counts toward today's calorie total, same as food.</p>
+    <div class="capture-row">
+      <button class="btn" id="addBeerBtn">🍺 Beer (~150)</button>
+      <button class="btn" id="addWineBtn">🍷 Wine (~125)</button>
+    </div>
+    <div class="capture-row" style="margin-top:10px;">
+      <button class="btn" id="addSpiritBtn">🥃 Spirit (~100)</button>
+      <button class="btn" id="addCocktailBtn">🍸 Cocktail (~200)</button>
+    </div>
+    <button class="btn" id="addCustomDrinkBtn" style="width:100%; margin-top:10px;">+ Custom drink</button>
+    <div class="result" id="customDrinkForm">
+      <div class="fields">
+        <div class="field"><label>Drink</label><input type="text" id="dName" placeholder="Old fashioned"></div>
+        <div class="field"><label>Calories</label><input type="number" id="dCal" placeholder="180"></div>
+      </div>
+      <button class="btn btn-primary" id="addCustomDrinkConfirm" style="width:100%;">Add</button>
+    </div>
+    <div id="drinkList" style="margin-top:6px;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Trends</h2>
+    <div class="capture-row">
+      <button class="btn btn-primary" id="trendsWeekBtn">This week</button>
+      <button class="btn" id="trendsMonthBtn">This month</button>
+    </div>
+    <div id="trendsBody" style="margin-top:16px;">
+      <div class="activity-empty">Loading…</div>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>Log a meal</h2>
     <div class="capture-row">
       <button class="btn" id="cameraBtn">📷 Take photo</button>
@@ -287,6 +335,7 @@ let todaysLog = [];
 let todaysHealth = null;
 let todaysWorkouts = [];
 let todaysCaffeine = [];
+let todaysAlcohol = [];
 
 async function loadSettings(){
   const v = await apiGet('settings');
@@ -318,6 +367,14 @@ async function loadTodayCaffeine(){
 }
 async function saveTodayCaffeine(){ await apiSet('caffeine:' + todayKey(), todaysCaffeine); }
 
+async function loadTodayAlcohol(){
+  const v = await apiGet('alcohol:' + todayKey());
+  todaysAlcohol = v || [];
+  renderAlcohol();
+  renderGauge();
+}
+async function saveTodayAlcohol(){ await apiSet('alcohol:' + todayKey(), todaysAlcohol); }
+
 async function loadTodayHealth(){
   const v = await apiGet('health:' + todayKey());
   todaysHealth = v || null;
@@ -348,7 +405,9 @@ function activeCaloriesBurned(){
 }
 
 function renderGauge(){
-  const consumed = todaysLog.reduce((s,e)=>s+Number(e.calories||0),0);
+  const foodCalories = todaysLog.reduce((s,e)=>s+Number(e.calories||0),0);
+  const alcoholCalories = todaysAlcohol.reduce((s,e)=>s+Number(e.calories||0),0);
+  const consumed = foodCalories + alcoholCalories;
   const baseTarget = settings.dailyCalorieTarget;
   const burned = activeCaloriesBurned();
   const adjustedTarget = baseTarget + Math.round(burned * 0.5); // partial credit for activity
@@ -492,6 +551,34 @@ function renderCaffeine(){
   } else {
     cutoffNote.style.display = 'none';
   }
+}
+
+function renderAlcohol(){
+  const list = document.getElementById('drinkList');
+  if(todaysAlcohol.length === 0){
+    list.innerHTML = '';
+    return;
+  }
+  list.innerHTML = todaysAlcohol.map(d => `
+    <div class="ledger-row">
+      <div>
+        <div class="ledger-food">${escapeHtml(d.name)}</div>
+        <div class="ledger-time">${d.time}</div>
+      </div>
+      <div class="ledger-right">
+        <div class="ledger-kcal">${d.calories} kcal</div>
+        <button class="del-btn" data-id="${d.id}">✕</button>
+      </div>
+    </div>
+  `).join('');
+  list.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      todaysAlcohol = todaysAlcohol.filter(d => d.id !== btn.dataset.id);
+      await saveTodayAlcohol();
+      renderAlcohol();
+      renderGauge();
+    });
+  });
 }
 
 function parse12hTime(t){
@@ -650,13 +737,108 @@ document.getElementById('addCustomCaffeineConfirm').addEventListener('click', as
   document.getElementById('cMg').value = '';
 });
 
+async function addDrink(name, calories){
+  todaysAlcohol.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    name, calories,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  });
+  await saveTodayAlcohol();
+  renderAlcohol();
+  renderGauge();
+}
+document.getElementById('addBeerBtn').addEventListener('click', ()=> addDrink('Beer', 150));
+document.getElementById('addWineBtn').addEventListener('click', ()=> addDrink('Wine (glass)', 125));
+document.getElementById('addSpiritBtn').addEventListener('click', ()=> addDrink('Spirit shot', 100));
+document.getElementById('addCocktailBtn').addEventListener('click', ()=> addDrink('Cocktail', 200));
+document.getElementById('addCustomDrinkBtn').addEventListener('click', ()=>{
+  document.getElementById('customDrinkForm').style.display = 'block';
+});
+document.getElementById('addCustomDrinkConfirm').addEventListener('click', async ()=>{
+  const name = document.getElementById('dName').value || 'Custom drink';
+  const cal = Number(document.getElementById('dCal').value) || 0;
+  await addDrink(name, cal);
+  document.getElementById('customDrinkForm').style.display = 'none';
+  document.getElementById('dName').value = '';
+  document.getElementById('dCal').value = '';
+});
+
+// --- Trends ---
+async function loadTrends(days){
+  document.getElementById('trendsBody').innerHTML = '<div class="activity-empty">Loading…</div>';
+  try{
+    const r = await fetch('/.netlify/functions/api-trends?days=' + days);
+    const data = await r.json();
+    renderTrends(data);
+  }catch(err){
+    document.getElementById('trendsBody').innerHTML = '<div class="activity-empty">Could not load trends.</div>';
+  }
+}
+
+function renderTrends(data){
+  const { days, summary } = data;
+  const maxVal = Math.max(...days.map(d => Math.max(d.consumed, d.target)), 1);
+
+  const bars = days.map(d => {
+    const heightPct = Math.max((d.consumed / maxVal) * 100, d.hasData ? 3 : 0);
+    const color = !d.hasData ? '#33503f' : (d.diff > 0 ? 'var(--danger)' : (d.diff > -200 ? 'var(--amber)' : 'var(--leaf)'));
+    return `
+      <div class="trend-bar-wrap">
+        <div class="trend-bar" style="height:${heightPct}%; background:${color};" title="${d.date}: ${d.consumed} kcal"></div>
+        <div class="trend-bar-label">${d.dayOfWeek}</div>
+      </div>`;
+  }).join('');
+
+  let insight = '';
+  if(summary.daysLogged === 0){
+    insight = "No logged days in this window yet — once you've tracked a few days, insights will show up here.";
+  } else {
+    insight = `Averaging <strong>${summary.avgConsumed} kcal/day</strong> against a ${summary.avgTarget} kcal target, across ${summary.daysLogged} logged day${summary.daysLogged===1?'':'s'} — over budget on ${summary.daysOver} of them.`;
+    if(summary.worstDay){
+      insight += ` <strong>${summary.worstDay}s</strong> run highest, averaging ${summary.worstDayAvgOver} kcal over.`;
+    }
+    if(summary.totalAlcoholCalories > 0){
+      insight += ` Alcohol added ${summary.totalAlcoholCalories} kcal in this window.`;
+    }
+  }
+
+  document.getElementById('trendsBody').innerHTML = `
+    <div class="trend-stats">
+      <div class="activity-stat"><div class="val">${summary.avgConsumed || 0}</div><div class="lbl">Avg kcal/day</div></div>
+      <div class="activity-stat"><div class="val">${summary.daysOver || 0}</div><div class="lbl">Days over</div></div>
+      <div class="activity-stat"><div class="val">${summary.daysLogged || 0}</div><div class="lbl">Days logged</div></div>
+    </div>
+    <div class="trend-chart">${bars}</div>
+    <div class="insight-box">${insight}</div>
+  `;
+}
+
+document.getElementById('trendsWeekBtn').addEventListener('click', (e)=>{
+  document.getElementById('trendsWeekBtn').className = 'btn btn-primary';
+  document.getElementById('trendsMonthBtn').className = 'btn';
+  loadTrends(7);
+});
+document.getElementById('trendsMonthBtn').addEventListener('click', (e)=>{
+  document.getElementById('trendsMonthBtn').className = 'btn btn-primary';
+  document.getElementById('trendsWeekBtn').className = 'btn';
+  loadTrends(30);
+});
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  });
+}
+
 (async function init(){
   document.getElementById('dateBadge').textContent = new Date().toLocaleDateString([], { weekday:'short', day:'numeric', month:'short' });
   await loadSettings();
   await loadTodayLog();
   await loadTodayWorkouts();
   await loadTodayCaffeine();
+  await loadTodayAlcohol();
   await loadTodayHealth();
+  await loadTrends(7);
 })();
 </script>
 </body>
