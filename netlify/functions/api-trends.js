@@ -81,6 +81,21 @@ exports.handler = async (event) => {
 
   const totalAlcoholCalories = loggedDays.reduce((s, r) => s + r.alcoholCalories, 0);
 
+  // Cumulative "balance" — sum of (budget - spent) across logged days.
+  // Positive = net saved (profit), negative = net overspent (loss). This is the
+  // headline "game" number: how you're doing overall, not just today.
+  const totalBalance = loggedDays.reduce((s, r) => s - r.diff, 0);
+
+  // Current streak: consecutive most-recent days (walking backward from today)
+  // where the day was logged and under budget. Breaks on first over-budget or
+  // unlogged day.
+  let streak = 0;
+  for (let i = results.length - 1; i >= 0; i--) {
+    const r = results[i];
+    if (!r.hasData || r.diff > 0) break;
+    streak++;
+  }
+
   return {
     statusCode: 200,
     headers: { "Content-Type": "application/json" },
@@ -93,7 +108,9 @@ exports.handler = async (event) => {
         daysOver,
         worstDay: worstAvg > 0 ? worstDay : null,
         worstDayAvgOver: worstAvg > 0 ? Math.round(worstAvg) : 0,
-        totalAlcoholCalories
+        totalAlcoholCalories,
+        totalBalance,
+        streak
       }
     })
   };
