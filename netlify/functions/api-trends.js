@@ -1,13 +1,13 @@
-const { getStore } = require("@netlify/blobs");
+const { kvGet } = require("./lib/supabase");
 
 // Returns per-day calorie totals (food + alcohol) plus day-of-week breakdown,
 // for the last N days, so the frontend can render weekly/monthly trend views
 // without doing dozens of round trips itself.
 exports.handler = async (event) => {
-  const store = getStore("a2-fuel");
+ try {
   const days = Math.min(parseInt((event.queryStringParameters && event.queryStringParameters.days) || "7"), 90);
 
-  const settingsRaw = await store.get("settings");
+  const settingsRaw = await kvGet("settings");
   const settings = settingsRaw ? JSON.parse(settingsRaw) : { dailyCalorieTarget: 2000 };
 
   const results = [];
@@ -19,10 +19,10 @@ exports.handler = async (event) => {
     const key = d.toISOString().slice(0, 10);
 
     const [logRaw, alcoholRaw, workoutsRaw, caffeineRaw] = await Promise.all([
-      store.get("log:" + key),
-      store.get("alcohol:" + key),
-      store.get("workouts:" + key),
-      store.get("caffeine:" + key)
+      kvGet("log:" + key),
+      kvGet("alcohol:" + key),
+      kvGet("workouts:" + key),
+      kvGet("caffeine:" + key)
     ]);
 
     const log = logRaw ? JSON.parse(logRaw) : [];
@@ -46,14 +46,13 @@ exports.handler = async (event) => {
       alcoholCalories,
       consumed,
       target,
-      diff: consumed - target, // positive = over
+      diff: consumed - target,
       burned,
       caffeineMg,
       hasData
     });
   }
 
-  // Oldest first, easier to chart left-to-right
   results.reverse();
 
   const loggedDays = results.filter(r => r.hasData);
@@ -65,7 +64,6 @@ exports.handler = async (event) => {
     : 0;
   const daysOver = loggedDays.filter(r => r.diff > 0).length;
 
-  // Which day-of-week runs over most often on average — a simple "where you're going wrong" signal
   const byDow = {};
   for (const r of loggedDays) {
     if (!byDow[r.dayOfWeek]) byDow[r.dayOfWeek] = { total: 0, count: 0, alcoholTotal: 0 };
@@ -80,15 +78,8 @@ exports.handler = async (event) => {
   }
 
   const totalAlcoholCalories = loggedDays.reduce((s, r) => s + r.alcoholCalories, 0);
-
-  // Cumulative "balance" — sum of (budget - spent) across logged days.
-  // Positive = net saved (profit), negative = net overspent (loss). This is the
-  // headline "game" number: how you're doing overall, not just today.
   const totalBalance = loggedDays.reduce((s, r) => s - r.diff, 0);
 
-  // Current streak: consecutive most-recent days (walking backward from today)
-  // where the day was logged and under budget. Breaks on first over-budget or
-  // unlogged day.
   let streak = 0;
   for (let i = results.length - 1; i >= 0; i--) {
     const r = results[i];
@@ -114,4 +105,7 @@ exports.handler = async (event) => {
       }
     })
   };
+ } catch (err) {
+  return { statusCode: 500, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ error: err.message }) };
+ }
 };
