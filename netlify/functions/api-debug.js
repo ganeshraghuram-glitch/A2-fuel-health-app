@@ -1,39 +1,36 @@
-const { getA2FuelStore } = require("./lib/blobStore");
+const { kvGet, kvSet } = require("./lib/supabase");
 
 exports.handler = async () => {
   const report = { steps: [] };
 
-  const rawToken = process.env.NETLIFY_BLOBS_TOKEN || "";
   report.diagnostics = {
-    siteID: process.env.SITE_ID || "(not set)",
-    tokenLength: rawToken.length,
-    tokenTrimmedLength: rawToken.trim().length,
-    tokenHasWhitespace: rawToken.length !== rawToken.trim().length,
-    tokenFirst4Chars: rawToken.slice(0, 4) || "(empty)",
-    tokenLast4Chars: rawToken.slice(-4) || "(empty)"
+    supabaseUrlSet: !!process.env.SUPABASE_URL,
+    supabaseKeySet: !!process.env.SUPABASE_SERVICE_KEY
   };
 
   try {
-    report.steps.push("Initializing store...");
-    const store = getA2FuelStore();
-    report.steps.push("Store initialized OK");
     const testKey = "debug-test";
     const testValue = JSON.stringify({ timestamp: new Date().toISOString(), random: Math.random() });
+
     report.steps.push("Writing test value...");
-    await store.set(testKey, testValue);
+    await kvSet(testKey, testValue);
     report.steps.push("Write OK");
+
     report.steps.push("Reading test value back...");
-    const readBack = await store.get(testKey);
+    const readBack = await kvGet(testKey);
     report.steps.push("Read OK");
+
     report.success = readBack === testValue;
     report.written = testValue;
     report.readBack = readBack;
+
     const [settings, todayLog] = await Promise.all([
-      store.get("settings"),
-      store.get("log:" + new Date().toISOString().slice(0, 10))
+      kvGet("settings"),
+      kvGet("log:" + new Date().toISOString().slice(0, 10))
     ]);
     report.currentSettings = settings || "(nothing saved yet)";
     report.currentTodayLog = todayLog || "(nothing saved yet)";
+
     return { statusCode: 200, headers: { "Content-Type": "application/json" }, body: JSON.stringify(report, null, 2) };
   } catch (err) {
     report.error = err.message;
