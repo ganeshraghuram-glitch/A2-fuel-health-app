@@ -2,6 +2,17 @@ const { getA2FuelStore } = require("./lib/blobStore");
 
 exports.handler = async () => {
   const report = { steps: [] };
+
+  const rawToken = process.env.NETLIFY_BLOBS_TOKEN || "";
+  report.diagnostics = {
+    siteID: process.env.SITE_ID || "(not set)",
+    tokenLength: rawToken.length,
+    tokenTrimmedLength: rawToken.trim().length,
+    tokenHasWhitespace: rawToken.length !== rawToken.trim().length,
+    tokenFirst4Chars: rawToken.slice(0, 4) || "(empty)",
+    tokenLast4Chars: rawToken.slice(-4) || "(empty)"
+  };
+
   try {
     report.steps.push("Initializing store...");
     const store = getA2FuelStore();
