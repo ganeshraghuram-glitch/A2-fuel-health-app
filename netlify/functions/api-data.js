@@ -1,7 +1,5 @@
-const { getStore } = require("@netlify/blobs");
+const { kvGet, kvSet, kvDelete } = require("./lib/supabase");
 
-// Generic key/value read-write for this single-user app.
-// Keys used by the frontend: "settings", "log:YYYY-MM-DD", "weightlog", "health:YYYY-MM-DD"
 exports.handler = async (event) => {
   const key = event.queryStringParameters && event.queryStringParameters.key;
 
@@ -9,20 +7,9 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "Missing 'key' query parameter" }) };
   }
 
-  let store;
-  try {
-    store = getStore("a2-fuel");
-  } catch (err) {
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Could not initialize storage", detail: err.message })
-    };
-  }
-
   try {
     if (event.httpMethod === "GET") {
-      const value = await store.get(key);
+      const value = await kvGet(key);
       return {
         statusCode: 200,
         headers: { "Content-Type": "application/json" },
@@ -31,12 +18,12 @@ exports.handler = async (event) => {
     }
 
     if (event.httpMethod === "POST") {
-      await store.set(key, event.body || "null");
+      await kvSet(key, event.body || "null");
       return { statusCode: 200, body: JSON.stringify({ ok: true }) };
     }
 
     if (event.httpMethod === "DELETE") {
-      await store.delete(key);
+      await kvDelete(key);
       return { statusCode: 200, body: JSON.stringify({ ok: true }) };
     }
 
