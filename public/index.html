@@ -123,7 +123,7 @@
 
   <header>
     <div>
-      <p class="eyebrow">A2 Fuel</p>
+      <p class="eyebrow">A2 Fuel <span style="opacity:0.4;">· build 7</span></p>
       <h1>Today's Cart</h1>
     </div>
     <div>
@@ -274,6 +274,10 @@
     </div>
     <div class="bmi-row"><span>Current BMI</span><span class="bmi-val" id="bmiVal">—</span></div>
     <div class="bmi-row"><span>Healthy BMI range (weight)</span><span class="bmi-val" id="healthyRangeVal">—</span></div>
+    <div class="capture-row" style="margin-top:14px;">
+      <input type="number" id="quickWeightInput" step="0.1" placeholder="Weigh in (kg)" style="flex:1; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:12px; color:var(--cream); font-family:var(--mono); font-size:14px;">
+      <button class="btn btn-primary" id="quickWeightSave" style="flex:0 0 auto; padding:12px 20px;">Save</button>
+    </div>
   </div>
 
   
@@ -396,7 +400,7 @@ async function apiSet(key, value){
 }
 
 const defaultSettings = {
-  weightKg: 78, heightCm: 170, age: 43, sex: "male",
+  weightKg: 83, heightCm: 170, age: 43, sex: "male",
   activity: 1.55, targetWeightKg: 72, dailyCalorieTarget: 2000,
   caffeineCutoff: "14:00", caffeineLimit: 400
 };
@@ -699,6 +703,7 @@ function renderWeightGoal(){
   document.getElementById('healthyRangeVal').textContent = healthyLow + '–' + healthyHigh + ' kg';
   document.getElementById('weightStartLabel').textContent = settings.weightKg + ' kg now';
   document.getElementById('weightTargetLabel').textContent = 'Target ' + settings.targetWeightKg + ' kg';
+  document.getElementById('quickWeightInput').value = settings.weightKg;
   const start = Math.max(settings.weightKg, settings.targetWeightKg) + 3;
   const end = settings.targetWeightKg;
   const span = start - end;
@@ -706,6 +711,16 @@ function renderWeightGoal(){
   const pct = span > 0 ? Math.min(Math.max((progressed/span)*100, 0), 100) : 0;
   document.getElementById('weightFill').style.width = pct + '%';
 }
+
+document.getElementById('quickWeightSave').addEventListener('click', async ()=>{
+  const newWeight = parseFloat(document.getElementById('quickWeightInput').value);
+  if(!newWeight || newWeight <= 0){ showToast('Enter a valid weight first', 'error'); return; }
+  settings = { ...settings, weightKg: newWeight };
+  renderGauge(); renderWeightGoal();
+  await saveWithRetry(saveSettingsToStorage, 'Weight updated — ' + newWeight + ' kg');
+  await recordWeightEntry(newWeight);
+  await loadTrends(currentTrendsWindow);
+});
 
 function escapeHtml(s){ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
