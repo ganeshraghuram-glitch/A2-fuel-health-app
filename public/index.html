@@ -123,7 +123,7 @@
 
   <header>
     <div>
-      <p class="eyebrow">A2 Fuel <span style="opacity:0.4;">· build 7</span></p>
+      <p class="eyebrow">A2 Fuel <span style="opacity:0.4;">· build 8</span></p>
       <h1>Today's Cart</h1>
     </div>
     <div>
@@ -376,11 +376,14 @@ async function saveWithRetry(saveFn, successMsg){
 async function apiGet(key){
   try{
     const r = await fetch('/.netlify/functions/api-data?key=' + encodeURIComponent(key));
-    if(!r.ok) throw new Error('Server returned ' + r.status);
+    if(!r.ok){
+      const body = await r.json().catch(()=>({}));
+      throw new Error(body.detail || body.error || ('Server returned ' + r.status));
+    }
     return await r.json();
   }catch(err){
     console.error('apiGet failed for', key, err);
-    showToast('Could not load saved data — check your connection', 'error');
+    showToast('Load failed: ' + err.message, 'error');
     return null;
   }
 }
@@ -390,11 +393,14 @@ async function apiSet(key, value){
       method: 'POST',
       body: JSON.stringify(value)
     });
-    if(!r.ok) throw new Error('Server returned ' + r.status);
+    if(!r.ok){
+      const body = await r.json().catch(()=>({}));
+      throw new Error(body.detail || body.error || ('Server returned ' + r.status));
+    }
     return true;
   }catch(err){
     console.error('apiSet failed for', key, err);
-    showToast('Could not save — check your connection and try again', 'error');
+    showToast('Save failed: ' + err.message, 'error');
     return false;
   }
 }
