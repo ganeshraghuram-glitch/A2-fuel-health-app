@@ -1,9 +1,0 @@
-{
-  "name": "a2-fuel",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Personal calorie, activity, and caffeine tracker with photo food analysis and Apple Health integration",
-  "dependencies": {
-    "@netlify/blobs": "^8.1.0"
-  }
-}
